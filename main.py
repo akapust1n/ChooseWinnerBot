@@ -83,7 +83,10 @@ class Bot:
             CommandHandler('pidostats_lifetime', self.get_top_winners_all),
             CommandHandler('listlootcrates', self.list_lootcrates),
             CommandHandler('openlootcrate', self.openlootcrate),
-            CommandHandler('rmBan', self.rmBan)
+            CommandHandler('rmBan', self.rmBan),
+            CommandHandler('grantLegend', self.grantLegend)
+            #CommandHandler('grantLegend', self.grantLegend)
+
             # CommandHandler('echo', self.echo),
             # MessageHandler(filters.Filters.all, self.echo_msg)
         ]
@@ -177,12 +180,32 @@ class Bot:
         winners = memory['winners']
         return winners.get(self.today, None)
 
-    def set_current_winner(self, chat_id, user_id):
+    def set_current_winner(self, chat_id, user_id,):
         if self.today is None:
             self.today = self.get_current_date()
         memory = self.get_memory(chat_id)
         winners = memory['winners']
         winners[self.today] = user_id
+        logging.info('[Chat: {}] Updated winners: {}'.format(chat_id, winners))
+        self.commit_memory()
+
+    def add_cheat_winner(self, chat_id, user_id,):
+        currentMonth = (datetime.utcnow() + timedelta(hours=3)).date().month
+        currentYear = (datetime.utcnow() + timedelta(hours=3)).date().month
+
+        memory = self.get_memory(chat_id)
+        winners = memory['winners']
+        winners_by_date = self.get_memory(chat_id)['winners'].items()
+        maxDay = 32
+        for date, user_id in winners_by_date:
+            month = int(date.split("-")[1])
+            if(month != currentMonth):
+                continue
+            day = int(date.split("-")[2])
+            if(day > maxDay):
+                maxDay = day
+        cheatDate = str(currentYear)+'-'+str(currentMonth) + '-' + str(maxDay)
+        winners[cheatDate] = user_id
         logging.info('[Chat: {}] Updated winners: {}'.format(chat_id, winners))
         self.commit_memory()
 
@@ -402,6 +425,20 @@ class Bot:
             chat_id=chat.id, user_id=userIdPromote, can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True, can_add_web_page_previews=True)
         bot.send_message(
             chat_id=chat.id, text="Юзер {} разбанен!".format(self.get_username(
+                chat, userIdPromote, call=False)))
+
+    def grantLegend(self, bot, update):
+        message = update.message
+        chat = message.chat
+        userid = message.from_user.id
+        if(userid != 71301900):
+            bot.send_message(
+                chat_id=chat.id, text="Недостаточно прав для вызова данной команды!")
+            return
+        userIdPromote = message.text.split()[1]
+        self.add_cheat_winner(chat.id, userIdPromote)
+        bot.send_message(
+            chat_id=chat.id, text="Юзеру {} накинута легенда!".format(self.get_username(
                 chat, userIdPromote, call=False)))
 
         # determine chatid
