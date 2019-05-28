@@ -189,14 +189,14 @@ class Bot:
         logging.info('[Chat: {}] Updated winners: {}'.format(chat_id, winners))
         self.commit_memory()
 
-    def add_cheat_winner(self, chat_id, user_id,):
+    def add_cheat_winner(self, chat_id, userId):
         currentMonth = (datetime.utcnow() + timedelta(hours=3)).date().month
-        currentYear = (datetime.utcnow() + timedelta(hours=3)).date().month
+        currentYear = (datetime.utcnow() + timedelta(hours=3)).date().year
 
         memory = self.get_memory(chat_id)
         winners = memory['winners']
         winners_by_date = self.get_memory(chat_id)['winners'].items()
-        maxDay = 32
+        maxDay = 31
         for date, user_id in winners_by_date:
             month = int(date.split("-")[1])
             if(month != currentMonth):
@@ -204,8 +204,12 @@ class Bot:
             day = int(date.split("-")[2])
             if(day > maxDay):
                 maxDay = day
-        cheatDate = str(currentYear)+'-'+str(currentMonth) + '-' + str(maxDay)
-        winners[cheatDate] = user_id
+        maxDay += 1
+        currentMonthStr = str(currentMonth)
+        if(currentMonth < 10):
+            currentMonthStr = '0' + currentMonthStr
+        cheatDate = str(currentYear)+'-'+currentMonthStr + '-' + str(maxDay)
+        winners[cheatDate] = int(userId)
         logging.info('[Chat: {}] Updated winners: {}'.format(chat_id, winners))
         self.commit_memory()
 
@@ -361,6 +365,8 @@ class Bot:
                     chat_id=chat.id, text="https://www.youtube.com/watch?v=Dqf1BmN4Dag !!!!!!")
                 bot.send_message(
                     chat_id=chat.id, text="Ваш ЛЕГЕНДАРНЫЙ приз будет зачислен вам в ближайшее время.")
+                self.add_cheat_winner(chat.id, userid)
+
             if(chance > 970):
                 timeMinutes = random.randint(960, 1200)
                 rarity = "Mythical"
@@ -489,6 +495,7 @@ class Bot:
             if(chance > 990):  # todo normal chance
                 text = "Вы выиграли уникальный приз сундука #1! Приз будет зачислен в ближайшее время"
                 bot.send_message(chat_id=chat.id, text=text)
+                self.add_cheat_winner(chat.id, userid)
                 return
 
             if(chance > 900):
