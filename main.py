@@ -29,6 +29,10 @@ logging.basicConfig(
     format='%(levelname)s [%(asctime)s] %(message)s', level=logging.INFO)
 
 
+def set_random_seed():
+    random.seed(os.urandom(10))
+
+
 def requires_public_chat(func):
     @functools.wraps(func)
     def wrapped(self, bot, update, **kwargs):
@@ -309,7 +313,7 @@ class Bot:
 
     @requires_public_chat
     def rollBan(self, bot, update):
-        random.seed(a=None, version=2)
+        set_random_seed()
         message = update.message
         chat = message.chat
         userid = message.from_user.id
@@ -483,7 +487,7 @@ class Bot:
 
     @requires_public_chat
     def openlootcrate(self, bot, update):
-        random.seed(a=None, version=2)
+        set_random_seed()
         message = update.message
         chat = message.chat
         userid = update.message.from_user.id
@@ -545,7 +549,7 @@ class Bot:
     @logged
     @requires_public_chat
     def choose_winner(self, bot, update):
-        random.seed(a=None, version=2)
+        set_random_seed()
         message = update.message
         chat = message.chat
         current_winner = self.get_current_winner(chat.id)
