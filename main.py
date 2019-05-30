@@ -560,9 +560,6 @@ class Bot:
             self.send_answer(
                 bot, chat.id, template='winner_known', name=username)
         else:
-            self.send_answer(
-                bot, update.message.chat_id, text='Функция рола пидора дня отключена до исправления механики рандома. Бот ждет твой мердж-реквет!')
-            return
             players = self.get_players(chat.id)
             if len(players) == 0:
                 self.send_answer(bot, chat.id, template='no_players')
