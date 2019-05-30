@@ -2,9 +2,8 @@
 
 ### Build
 - Clone repo
-- Install Fabric: `pip install Fabric` 
 - Put your telegram bot token inside `token.txt` and place it in repo root
-- `fab build`
+- `docker build -t bot .`
 
 ### Run
-`fab run` (optional: `:host_volume_dir='/path/to/docker_host_dir/to/place/db_file'`)
+`docker run  -d  -e  MEMORY_DIR=/data  -v /home/docker/mount/system/pidorbot_data:/data —restart=always —name bot_1 bot`
