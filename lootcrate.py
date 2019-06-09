@@ -52,10 +52,10 @@ class LootCrates:
             self.data[chatId][lootCrateId][userId] += 1
         self.commit()
 
-    def rmLootCrate(self, chatId, userId, lootCrateId):
+    def rmLootCrate(self, chatId, userId, lootCrateId, count=1):
         try:
-            if(self.data[chatId][lootCrateId][userId] > 0):
-                self.data[chatId][lootCrateId][userId] -= 1
+            if(self.data[chatId][lootCrateId][userId] >= count):
+                self.data[chatId][lootCrateId][userId] -= count
                 self.commit()
                 return True
         except:
@@ -78,3 +78,13 @@ class LootCrates:
             pass
 
         return None
+
+    def getBalance(self, chatId, userId):
+        count = 0
+        try:
+            count = self.data[chatId][1][userId]
+            return count
+        except:
+            pass
+
+        return count

@@ -12,15 +12,18 @@ import json
 from datetime import datetime, timedelta
 
 
-from telegram.ext import Updater, CommandHandler  # MessageHandler, filters
+# MessageHandler, filters
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 from telegram.chat import Chat
 from lootcrate import LootCrates
+from shop import Shop
 
 from phrases import (
     GAME_RULES,
     common_phrases,
     scan_phrases,
-    stats_phrases
+    stats_phrases,
+    helpers
 )
 
 
@@ -59,7 +62,7 @@ def logged(func):
 
 
 class Bot:
-    def __init__(self, token, memory_filename, ban_filename, lootcrate_filename):
+    def __init__(self, token, memory_filename, ban_filename, lootcrate_filename, promotion_access_filename, promotion_rating):
         logging.info('Initializing bot...')
         self.updater = Updater(token=token)
         logging.info('Updater initialized')
@@ -68,6 +71,8 @@ class Bot:
         self.ban_filename = ban_filename
         self.memory = self.load_memory()
         self.lootCrates = LootCrates(lootcrate_filename)
+        self.myshop = Shop(promotion_access_filename, helpers,
+                           self.lootCrates, self.add_cheat_winner, promotion_rating)
         logging.info('Memory loaded')
 
         self.today = None
@@ -84,12 +89,19 @@ class Bot:
             CommandHandler('rollBan', self.rollBan),
             # CommandHandler('test', self.test),
             # CommandHandler('test2', self.test2),
+            CommandHandler('test3', self.test3),
+            CommandHandler('shop', self.shop),
             CommandHandler('pidostats_lifetime', self.get_top_winners_all),
             CommandHandler('listlootcrates', self.list_lootcrates),
             CommandHandler('openlootcrate', self.openlootcrate),
             CommandHandler('rmBan', self.rmBan),
-            CommandHandler('grantLegend', self.grantLegend)
-            # CommandHandler('grantLegend', self.grantLegend)
+            CommandHandler('grantLegend', self.grantLegend),
+            CommandHandler('promotop', self.promotop),
+            CallbackQueryHandler(self.myshop.promoInfo, pattern="promo"),
+            CallbackQueryHandler(self.myshop.buyLegend, pattern="buy_legend"),
+            CallbackQueryHandler(
+                self.myshop.buyPromoAccess, pattern="aclo_access")
+
 
             # CommandHandler('echo', self.echo),
             # MessageHandler(filters.Filters.all, self.echo_msg)
@@ -311,6 +323,21 @@ class Bot:
         else:
             self.send_answer(bot, chat.id, template='no_players')
 
+    def sendMem(self, bot, chatId, board):
+        r = requests.get(
+            "https://meme-api.herokuapp.com/gimme/"+board)
+        if(r.status_code == 200):
+            temp = r.json()
+            if(temp.get("url") is None):
+                r = requests.get(
+                    "https://meme-reddit-api.herokuapp.com/gimme/"+board)
+
+            mem = temp.get("url")
+            if mem is not None:
+                bot.send_message(chat_id=chatId, text=mem)
+            else:
+                bot.send_message(chat_id=chatId, text="мемы сломались :(")
+
     @requires_public_chat
     def rollBan(self, bot, update):
         set_random_seed()
@@ -359,9 +386,8 @@ class Bot:
             chance = random.randint(1, 1000)
             rarity = "Common"
             timeMinutes = 0
-
             lootcrateChance = 300 if datetime.now().day == 12 else 150
-            if(chance > 997):
+            if(chance > 992):
 
                 rarity = "Legendary"
                 bot.send_message(chat_id=chat.id, text="ЛЕГЕНДА!!!!!!")
@@ -381,7 +407,15 @@ class Bot:
                 timeMinutes = random.randint(60, 120)
                 rarity = "Uncommon"
             elif(chance > lootcrateChance):
-                timeMinutes = random.randint(10, 20)
+                if (chance > 400 and self.myshop.checkAcess(chat.id, userid)):
+                    name, prize = self.myshop.getPrize()
+                    name= "Выигрыш: 🍾 " + name
+                    self.myshop.addRating(chat.id, userid,1,prize)
+                    bot.send_message(chat_id=chat.id, text=name, parse_mode='Markdown')
+                    self.sendMem(bot, chat.id, "alcohol")
+                    return
+                else:
+                    timeMinutes = random.randint(10, 20)
             else:
                 self.lootCrates.grantLootCrate(bot, chat.id, userid)
                 return
@@ -391,19 +425,7 @@ class Bot:
                 answer = "Поздравляем, вы выиграли _*{}*_ бан. Время вашего бана - {} минут".format(
                     rarity, timeMinutes)
 
-            r = requests.get(
-                "https://meme-api.herokuapp.com/gimme")
-            if(r.status_code == 200):
-                temp = r.json()
-                if(temp.get("url") is None):
-                    r = requests.get(
-                        "https://meme-api.herokuapp.com/gimme")
-
-                mem = temp.get("url")
-                if mem is not None:
-                    bot.send_message(chat_id=chat.id, text=mem)
-                else:
-                    bot.send_message(chat_id=chat.id, text="мемы сломались :(")
+            self.sendMem(bot, chat.id, "dankmemes")
 
             bot.send_message(
                 chat_id=chat.id, text=answer, parse_mode='Markdown')
@@ -421,6 +443,14 @@ class Bot:
         # self.lootCrates.rmLootCrate(chat.id, userid, 1)
         self.lootCrates.getLootCratesList(chat.id, 1)
 
+    def test3(self, bot, update):
+        chat = update.message.chat
+        users = [139253568, 136749665, 274650176, 174207553, 376468900, 103780997, 1582822, 53875204,
+                 168115976, 259921737, 318522279, 71301900, 248072222, 194293177, 261648281, 79538878]
+        # self.lootCrates.rmLootCrate(chat.id, userid, 1)
+        for userid in users:
+            print(userid, self.get_username(chat, userid))
+
     @requires_public_chat
     def rmBan(self, bot, update):
         message = update.message
@@ -431,11 +461,16 @@ class Bot:
                 chat_id=chat.id, text="Недостаточно прав для вызова данной команды!")
             return
         userIdPromote = message.text.split()[1]
+        chatid = chat.id
+        if(len(message.text.split()) > 2):
+            chatid = message.text.split()[2]
         bot.restrictChatMember(
-            chat_id=chat.id, user_id=userIdPromote, can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True, can_add_web_page_previews=True)
-        bot.send_message(
-            chat_id=chat.id, text="Юзер {} разбанен!".format(self.get_username(
+            chat_id=chatid, user_id=userIdPromote, can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True, can_add_web_page_previews=True)
+        bot.send_message(chat_id=chat.id, text="Бан снят с юзера {} ".format(self.get_username(
                 chat, userIdPromote, call=False)))
+        # bot.send_message(
+        #   chat_id=chatid, text="Юзер {} разбанен!".format(self.get_username(
+           #   chat, userIdPromote, call=False)))
 
     def grantLegend(self, bot, update):
         message = update.message
@@ -480,7 +515,7 @@ class Bot:
                                                                            chat, playerId, call=False),
                                                                        cnt=lootCrateCount))
            # text += ['', stats_phrases['footer_lootcrate'].format( TODO
-             #   players_cnt=len(self.get_players(chat.id)))]
+            #   players_cnt=len(self.get_players(chat.id)))]
             self.send_answer(bot, chat.id, text='\n'.join(text))
         else:
             self.send_answer(bot, chat.id, text='На складе сундуков пусто! 🗑️')
@@ -496,7 +531,7 @@ class Bot:
 
         if(self.lootCrates.rmLootCrate(chat.id, userid, 1)):
             # for lootcrate 1 . TODO resource system
-            if(chance > 990):  # todo normal chance
+            if(chance > 985):  # todo normal chance
                 text = "Вы выиграли уникальный приз сундука #1! Приз будет зачислен в ближайшее время"
                 bot.send_message(chat_id=chat.id, text=text)
                 self.add_cheat_winner(chat.id, userid)
@@ -583,6 +618,40 @@ class Bot:
                     scan_phrases[-1]).format(name=selected_name)
                 self.send_answer(bot, chat.id, text=last_phrase)
 
+    def shop(self, bot, update):
+        message = update.message
+        chat = message.chat
+        user_id = message.from_user.id
+        self.myshop.getMenu(chat.id, user_id, bot)
+
+
+    @requires_public_chat
+    def promotop(self, bot, update):
+        message = update.message
+        chat = message.chat
+        chat_id = chat.id
+        players = self.myshop.getPromoRating(chat_id, 1)
+        if(players is None):
+            self.send_answer(
+                bot, chat.id, text='Рейтинг пуст! 🗑️')  # copypaste
+            return
+
+        sorted_players = sorted(
+            players.items(), key=lambda kv: kv[1], reverse=True)
+        sorted_players = sorted_players[:10]
+        if len(sorted_players) > 0:
+            text = [stats_phrases['header_promo_aclo'], '']
+            for i, (playerId, lootCrateCount) in enumerate(sorted_players):  # there should be
+                text.append(stats_phrases['template_promo'].format(num=i + 1,
+                                                                       name=self.get_username(
+                                                                           chat, playerId, call=False),
+                                                                       cnt=lootCrateCount))
+           # text += ['', stats_phrases['footer_lootcrate'].format( TODO
+            #   players_cnt=len(self.get_players(chat.id)))]
+            self.send_answer(bot, chat.id, text='\n'.join(text))
+        else:
+            self.send_answer(bot, chat.id, text='Рейтинг пуст! 🗑️')
+
     @logged
     def shrug(self, bot, update):
         self.send_answer(bot, update.message.chat_id, text='¯\_(ツ)_/¯')
@@ -623,7 +692,12 @@ if __name__ == '__main__':
         'MEMORY_DIR', SCRIPT_DIR), 'ban_dump.json')
     lootcrate_filename = os.path.join(os.environ.get(
         'MEMORY_DIR', SCRIPT_DIR), 'lootcrate.json')
+    promotion_access_filename = os.path.join(os.environ.get(
+        'MEMORY_DIR', SCRIPT_DIR), 'promotion_access_filename.json')
+    promotion_rating = os.path.join(os.environ.get(
+        'MEMORY_DIR', SCRIPT_DIR), 'promotion_rating.json')
     bot_ = Bot(token=token_, memory_filename=mem_filename,
-               ban_filename=ban_filename, lootcrate_filename=lootcrate_filename)
+               ban_filename=ban_filename, lootcrate_filename=lootcrate_filename,
+               promotion_access_filename=promotion_access_filename, promotion_rating= promotion_rating)
 
     bot_.start_polling()
