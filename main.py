@@ -409,9 +409,10 @@ class Bot:
             elif(chance > lootcrateChance):
                 if (chance > 400 and self.myshop.checkAcess(chat.id, userid)):
                     name, prize = self.myshop.getPrize()
-                    name= "Выигрыш: 🍾 " + name
-                    self.myshop.addRating(chat.id, userid,1,prize)
-                    bot.send_message(chat_id=chat.id, text=name, parse_mode='Markdown')
+                    name = "Выигрыш: 🍾 " + name
+                    self.myshop.addRating(chat.id, userid, 1, prize)
+                    bot.send_message(chat_id=chat.id, text=name,
+                                     parse_mode='Markdown')
                     self.sendMem(bot, chat.id, "alcohol")
                     return
                 else:
@@ -538,8 +539,15 @@ class Bot:
                 return
 
             if(chance > 900):
-                timeMinutes = 24*60
+                timeMinutes = 24*60+8
             elif (chance > 700):
+                if (chance > 400 and self.myshop.checkAcess(chat.id, userid)):
+                    name, prize = self.myshop.getPrize()
+                    name= "Выигрыш: 🍾 " + name
+                    self.myshop.addRating(chat.id, userid,1,prize)
+                    bot.send_message(chat_id=chat.id, text=name, parse_mode='Markdown')
+                    self.sendMem(bot, chat.id, "alcohol")
+                    return
                 timeMinutes = 6*60
             elif(chance > 200):
                 timeMinutes = 3*60
