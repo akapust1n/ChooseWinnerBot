@@ -426,12 +426,12 @@ class Bot:
                 answer = "Поздравляем, вы выиграли _*{}*_ бан. Время вашего бана - {} минут".format(
                     rarity, timeMinutes)
 
-            self.sendMem(bot, chat.id, "dankmemes")
 
             bot.send_message(
                 chat_id=chat.id, text=answer, parse_mode='Markdown')
             bot.restrict_chat_member(
                 chat_id=chat.id, user_id=userid, until_date=time_from_now)
+            self.sendMem(bot, chat.id, "dankmemes")
 
     def test(self, bot, update):
         chat = update.message.chat
