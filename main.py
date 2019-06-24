@@ -10,7 +10,8 @@ import logging
 import requests
 import json
 from datetime import datetime, timedelta
-
+import aiohttp
+import asyncio
 
 # MessageHandler, filters
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
@@ -30,6 +31,7 @@ from phrases import (
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 logging.basicConfig(
     format='%(levelname)s [%(asctime)s] %(message)s', level=logging.INFO)
+session = aiohttp.ClientSession()
 
 
 def set_random_seed():
@@ -230,7 +232,7 @@ class Bot:
         self.commit_memory()
 
     @requires_public_chat
-    def get_top_winners_all(self, bot, update):  # копипаста -плохо
+    def get_top_winners_all(self, bot, update):  
         message = update.message
         chat = message.chat
         chat_id = chat.id
@@ -323,14 +325,18 @@ class Bot:
         else:
             self.send_answer(bot, chat.id, template='no_players')
 
-    def sendMem(self, bot, chatId, board):
-        r = requests.get(
-            "https://meme-api.herokuapp.com/gimme/"+board)
-        if(r.status_code == 200):
-            temp = r.json()
+    async def sendMem(self, bot, chatId, board):
+        global session
+        async with session.get('https://meme-api.herokuapp.com/gimme/'+board) as resp:
+            temp =""
+            if(resp.status==200):
+                respText = await resp.text()
+                temp = json.loads(respText)
             if(temp.get("url") is None):
-                r = requests.get(
-                    "https://meme-reddit-api.herokuapp.com/gimme/"+board)
+                async with session.get('https://meme-api.herokuapp.com/gimme/'+board) as resp2:
+                    respText = await resp.text()
+                    temp = json.loads(respText)
+
 
             mem = temp.get("url")
             if mem is not None:
@@ -339,6 +345,7 @@ class Bot:
                 bot.send_message(chat_id=chatId, text="мемы сломались :(")
 
     @requires_public_chat
+    
     def rollBan(self, bot, update):
         set_random_seed()
         message = update.message
@@ -413,7 +420,7 @@ class Bot:
                     self.myshop.addRating(chat.id, userid, 1, prize)
                     bot.send_message(chat_id=chat.id, text=name,
                                      parse_mode='Markdown')
-                    self.sendMem(bot, chat.id, "alcohol")
+                    asyncio.create_task(self.sendMem(bot, chat.id, "alcohol"))
                     return
                 else:
                     timeMinutes = random.randint(10, 20)
@@ -426,10 +433,11 @@ class Bot:
                 answer = "Поздравляем, вы выиграли _*{}*_ бан. Время вашего бана - {} минут".format(
                     rarity, timeMinutes)
 
-            self.sendMem(bot, chat.id, "dankmemes")
-
             bot.send_message(
                 chat_id=chat.id, text=answer, parse_mode='Markdown')
+            asyncio.create_task(self.sendMem(bot, chat.id, "dankmemes"))
+
+            
             bot.restrict_chat_member(
                 chat_id=chat.id, user_id=userid, until_date=time_from_now)
 
@@ -546,7 +554,7 @@ class Bot:
                     name= "Выигрыш: 🍾 " + name
                     self.myshop.addRating(chat.id, userid,1,prize)
                     bot.send_message(chat_id=chat.id, text=name, parse_mode='Markdown')
-                    self.sendMem(bot, chat.id, "alcohol")
+                  #  await self.sendMem(bot, chat.id, "alcohol")
                     return
                 timeMinutes = 6*60
             elif(chance > 200):
