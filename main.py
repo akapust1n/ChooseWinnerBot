@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 # MessageHandler, filters
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
+from telegram.ext.dispatcher import run_async
 from telegram.chat import Chat
 from lootcrate import LootCrates
 from shop import Shop
@@ -339,6 +340,7 @@ class Bot:
                 bot.send_message(chat_id=chatId, text="мемы сломались :(")
 
     @requires_public_chat
+    @run_async
     def rollBan(self, bot, update):
         set_random_seed()
         message = update.message
