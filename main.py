@@ -427,7 +427,9 @@ class Bot:
             if(rarity != "legendary"):
                 answer = "Поздравляем, вы выиграли _*{}*_ бан. Время вашего бана - {} минут".format(
                     rarity, timeMinutes)
-
+            if(chance > 600):
+                answer = answer + "ВНИМАНИЕ. Функция rollban будет отключена 1-го августа в связи с потерей игрой актуальности.  "
+                answer = answer + " Ждем ваши идеи для нового геймдизайна  https://github.com/akapust1n/chooseWinnerBot/issues"
 
             bot.send_message(
                 chat_id=chat.id, text=answer, parse_mode='Markdown')
@@ -541,7 +543,7 @@ class Bot:
                 return
 
             if(chance > 900):
-                timeMinutes = 24*60+8
+                timeMinutes = 24*60+48
             elif (chance > 700):
                 if (chance > 400 and self.myshop.checkAcess(chat.id, userid)):
                     name, prize = self.myshop.getPrize()
