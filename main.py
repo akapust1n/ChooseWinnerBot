@@ -27,7 +27,7 @@ from phrases import (
     helpers
 )
 
-
+finalDate = datetime.strptime("2019-08-01 00:00:53", "%Y-%m-%d %H:%M:%S")
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 logging.basicConfig(
     format='%(levelname)s [%(asctime)s] %(message)s', level=logging.INFO)
@@ -412,6 +412,9 @@ class Bot:
                 if (chance > 400 and self.myshop.checkAcess(chat.id, userid)):
                     name, prize = self.myshop.getPrize()
                     name = "Выигрыш: 🍾 " + name
+                    dateDiff = finalDate - datetime.now()
+                    name = name + "\nПейте быстрее! До конца розыгрыша {} дней {} часов {} минут".format(
+                        dateDiff.days, int(dateDiff.seconds/60/60), int(dateDiff.seconds/60 - int(dateDiff.seconds/60/60)*60))
                     self.myshop.addRating(chat.id, userid, 1, prize)
                     bot.send_message(chat_id=chat.id, text=name,
                                      parse_mode='Markdown')
@@ -427,9 +430,6 @@ class Bot:
             if(rarity != "legendary"):
                 answer = "Поздравляем, вы выиграли _*{}*_ бан. Время вашего бана - {} минут".format(
                     rarity, timeMinutes)
-            if(chance > 600):
-                answer = answer + "ВНИМАНИЕ. Функция rollban будет отключена 1-го августа в связи с потерей игрой актуальности.  "
-                answer = answer + " Ждем ваши идеи для нового геймдизайна  https://github.com/akapust1n/chooseWinnerBot/issues"
 
             bot.send_message(
                 chat_id=chat.id, text=answer, parse_mode='Markdown')
@@ -472,10 +472,10 @@ class Bot:
         bot.restrictChatMember(
             chat_id=chatid, user_id=userIdPromote, can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True, can_add_web_page_previews=True)
         bot.send_message(chat_id=chat.id, text="Бан снят с юзера {} ".format(self.get_username(
-                chat, userIdPromote, call=False)))
+            chat, userIdPromote, call=False)))
         # bot.send_message(
         #   chat_id=chatid, text="Юзер {} разбанен!".format(self.get_username(
-           #   chat, userIdPromote, call=False)))
+        #   chat, userIdPromote, call=False)))
 
     def grantLegend(self, bot, update):
         message = update.message
@@ -547,9 +547,13 @@ class Bot:
             elif (chance > 700):
                 if (chance > 400 and self.myshop.checkAcess(chat.id, userid)):
                     name, prize = self.myshop.getPrize()
-                    name= "Выигрыш: 🍾 " + name
-                    self.myshop.addRating(chat.id, userid,1,prize)
-                    bot.send_message(chat_id=chat.id, text=name, parse_mode='Markdown')
+                    name = "Выигрыш: 🍾 " + name
+                    dateDiff = finalDate - datetime.now()
+                    name = name + "\nПейте быстрее! До конца розыгрыша {} дней {} часов {} минут".format(
+                        dateDiff.days, int(dateDiff.seconds/60/60), int(dateDiff.seconds/60 - int(dateDiff.seconds/60/60)*60))
+                    self.myshop.addRating(chat.id, userid, 1, prize)
+                    bot.send_message(chat_id=chat.id, text=name,
+                                     parse_mode='Markdown')
                     self.sendMem(bot, chat.id, "alcohol")
                     return
                 timeMinutes = 6*60
@@ -636,7 +640,6 @@ class Bot:
         user_id = message.from_user.id
         self.myshop.getMenu(chat.id, user_id, bot)
 
-
     @requires_public_chat
     def promotop(self, bot, update):
         message = update.message
@@ -655,9 +658,9 @@ class Bot:
             text = [stats_phrases['header_promo_aclo'], '']
             for i, (playerId, lootCrateCount) in enumerate(sorted_players):  # there should be
                 text.append(stats_phrases['template_promo'].format(num=i + 1,
-                                                                       name=self.get_username(
-                                                                           chat, playerId, call=False),
-                                                                       cnt=lootCrateCount))
+                                                                   name=self.get_username(
+                                                                       chat, playerId, call=False),
+                                                                   cnt=lootCrateCount))
            # text += ['', stats_phrases['footer_lootcrate'].format( TODO
             #   players_cnt=len(self.get_players(chat.id)))]
             self.send_answer(bot, chat.id, text='\n'.join(text))
@@ -710,6 +713,6 @@ if __name__ == '__main__':
         'MEMORY_DIR', SCRIPT_DIR), 'promotion_rating.json')
     bot_ = Bot(token=token_, memory_filename=mem_filename,
                ban_filename=ban_filename, lootcrate_filename=lootcrate_filename,
-               promotion_access_filename=promotion_access_filename, promotion_rating= promotion_rating)
+               promotion_access_filename=promotion_access_filename, promotion_rating=promotion_rating)
 
     bot_.start_polling()
