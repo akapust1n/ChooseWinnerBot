@@ -342,6 +342,9 @@ class Bot:
     @requires_public_chat
     @run_async
     def rollBan(self, bot, update):
+        if(finalDate < datetime.now()):
+            self.promoWinners(bot, update)
+            return
         set_random_seed()
         message = update.message
         chat = message.chat
@@ -545,7 +548,7 @@ class Bot:
             if(chance > 900):
                 timeMinutes = 24*60+48
             elif (chance > 700):
-                if (chance > 400 and self.myshop.checkAcess(chat.id, userid)):
+                if (chance > 400 and self.myshop.checkAcess(chat.id, userid) and (finalDate > datetime.now())):
                     name, prize = self.myshop.getPrize()
                     name = "Выигрыш: 🍾 " + name
                     dateDiff = finalDate - datetime.now()
@@ -635,13 +638,50 @@ class Bot:
                 self.send_answer(bot, chat.id, text=last_phrase)
 
     def shop(self, bot, update):
+        if(finalDate < datetime.now()):
+            self.promoWinners(bot, update)
+            return
         message = update.message
         chat = message.chat
         user_id = message.from_user.id
         self.myshop.getMenu(chat.id, user_id, bot)
 
+    def promoWinners(self, bot, update):
+        message = update.message
+        chat = message.chat
+        chat_id = chat.id
+        players = self.myshop.getPromoRating(chat_id, 1)
+        if(players is None):
+            self.send_answer(
+                bot, chat.id, text='Рейтинг пуст! 🗑️')  # copypaste
+            return
+
+        sorted_players = sorted(
+            players.items(), key=lambda kv: kv[1], reverse=True)
+        sorted_players = sorted_players[:10]
+        if len(sorted_players) > 0:
+            text = []
+            text.append('ПОЧЕТНЫЙ ЛЕТНИЙ АЛКОГОЛИК ')
+            for i, (playerId, lootCrateCount) in enumerate(sorted_players):  # ужас
+                text.append(self.get_username(
+                    chat, playerId, call=False) + '\n')
+                break
+            text.append(stats_phrases['header_promo_aclo_final'])
+            sorted_players = sorted_players[1:10]
+            for i, (playerId, lootCrateCount) in enumerate(sorted_players):  # there should be
+                text.append(stats_phrases['template_promo'].format(num=i + 2,
+                                                                   name=self.get_username(
+                                                                       chat, playerId, call=False),
+                                                                   cnt=lootCrateCount))
+            self.send_answer(bot, chat.id, text='\n'.join(text))
+        else:
+            self.send_answer(bot, chat.id, text='Рейтинг пуст! 🗑️')
+
     @requires_public_chat
     def promotop(self, bot, update):
+        if(finalDate < datetime.now()):
+            self.promoWinners(bot, update)
+            return
         message = update.message
         chat = message.chat
         chat_id = chat.id

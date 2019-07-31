@@ -39,6 +39,7 @@ stats_phrases = {
     'header_all': 'Топ-10 <b>пидоров</b> за все время:',
     'header_lootcrate1': 'Топ-10 владельцев сундука #1',
     'header_promo_aclo': '🍾 Топ-10 алкоголиков 🍾',
+    'header_promo_aclo_final': 'Алкаши-неудачники 🍾',
     'template': '<b>{num}</b>. {name} — <i>{cnt} раз(а)</i>',
     'template_lootcrate': '<b>{num}</b>. {name} — <i>{cnt} шт</i>',
     'template_promo': '<b>{num}</b>. {name} — <i>{cnt} ‰</i>',
